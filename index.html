@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImageDesignLayout Bounding Box Visualizer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #a0a0a0;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #16213e;
+            color: #eee;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button.primary {
+            background: #e94560;
+            color: white;
+        }
+        
+        button.primary:hover {
+            background: #ff6b6b;
+            transform: translateY(-2px);
+        }
+        
+        button.secondary {
+            background: #333;
+            color: #eee;
+        }
+        
+        button.secondary:hover {
+            background: #444;
+        }
+        
+        .canvas-container {
+            background: #0f0f23;
+            border-radius: 12px;
+            padding: 20px;
+            overflow: auto;
+            max-height: 80vh;
+        }
+        
+        #canvas {
+            display: block;
+            margin: 0 auto;
+            border: 1px solid #333;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #16213e;
+            border-radius: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 2px solid;
+        }
+        
+        .options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #e94560;
+        }
+        
+        .error {
+            background: #ff4444;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ImageDesignLayout Bounding Box Visualizer</h1>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="base64Input">Base64 Image (with or without data:image prefix)</label>
+                <textarea id="base64Input" placeholder="Paste your base64 encoded image here..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="jsonInput">ImageDesignLayout JSON</label>
+                <textarea id="jsonInput" placeholder='{"page_width": 1000, "sections": [...]}'></textarea>
+            </div>
+        </div>
+        
+        <div class="options">
+            <label class="option">
+                <input type="checkbox" id="showLabels" checked>
+                Show element type labels
+            </label>
+            <label class="option">
+                <input type="checkbox" id="showSections" checked>
+                Show section boundaries
+            </label>
+            <label class="option">
+                <input type="checkbox" id="colorByType" checked>
+                Color by element type
+            </label>
+        </div>
+        
+        <div class="button-group">
+            <button class="primary" onclick="draw()">Draw Bounding Boxes</button>
+            <button class="secondary" onclick="copyCanvasToClipboard()">Copy to Clipboard</button>
+            <button class="secondary" onclick="clearCanvas()">Clear</button>
+        </div>
+        
+        <div id="error" class="error hidden"></div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div class="legend" id="legend"></div>
+    </div>
+    
+    <script src="drawer.js"></script>
+</body>
+</html>
