@@ -15,6 +15,9 @@ const TYPE_COLORS = {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
+// Pasted image data URL (set by clipboard paste or drag-and-drop)
+let pastedImageDataUrl = null;
+
 function showError(message) {
 	const errorDiv = document.getElementById('error');
 
@@ -32,6 +35,9 @@ function clearCanvas() {
 	canvas.height = 0;
 	document.getElementById('legend').innerHTML = '';
 	hideError();
+
+	// Also clear pasted image if present
+	clearPastedImage();
 }
 
 async function copyCanvasToClipboard() {
@@ -102,9 +108,20 @@ function draw() {
 	const base64Input = document.getElementById('base64Input').value.trim();
 	const jsonInput = document.getElementById('jsonInput').value.trim();
 
-	if (!base64Input) {
-		showError('Please provide a base64 image');
+	// Determine image source: pasted image takes priority, then base64 textarea
+	let imageSrc = null;
 
+	if (pastedImageDataUrl) {
+		imageSrc = pastedImageDataUrl;
+	} else if (base64Input) {
+		try {
+			imageSrc = normalizeBase64(base64Input);
+		} catch (error) {
+			showError(`Invalid base64 image: ${error.message}`);
+			return;
+		}
+	} else {
+		showError('Please provide an image (paste from clipboard or enter Base64 JSON)');
 		return;
 	}
 
@@ -139,10 +156,10 @@ function draw() {
 	});
 
 	img.onerror = () => {
-		showError('Failed to load image. Make sure the base64 string is valid.');
+		showError('Failed to load image. Make sure the image data is valid.');
 	};
 
-	img.src = normalizeBase64(base64Input);
+	img.src = imageSrc;
 }
 
 function drawWithImage(img, layout, options) {
@@ -288,6 +305,167 @@ function updateLegend(usedTypes, colorByType) {
 
 	legendDiv.innerHTML = html;
 }
+
+// --- Clipboard paste & drag-and-drop image support ---
+
+const pasteZone = document.getElementById('pasteZone');
+
+function setPastedImage(dataUrl, name) {
+	pastedImageDataUrl = dataUrl;
+
+	// Update paste zone to show preview
+	pasteZone.classList.add('has-image');
+	pasteZone.innerHTML = `
+		<button class="clear-image" title="Remove image" onclick="clearPastedImage(event)">&times;</button>
+		<img class="image-preview" src="${dataUrl}" alt="Pasted image">
+		<div class="image-name">${name || 'Pasted image'}</div>
+	`;
+
+	// Clear the base64 textarea since we're using the pasted image
+	document.getElementById('base64Input').value = '';
+}
+
+function clearPastedImage(event) {
+	if (event) {
+		event.stopPropagation();
+	}
+
+	pastedImageDataUrl = null;
+	pasteZone.classList.remove('has-image');
+	pasteZone.innerHTML = `
+		<div class="paste-icon">&#128203;</div>
+		<div class="paste-text"><strong>Paste image here</strong> (Ctrl/Cmd+V)</div>
+		<div class="paste-hint">or drag &amp; drop an image file</div>
+		<button class="paste-btn" onclick="event.stopPropagation(); pasteFromClipboardAPI()">Paste from Clipboard</button>
+	`;
+}
+
+function handleImageFile(file) {
+	if (!file || !file.type.startsWith('image/')) {
+		showError('The pasted content is not an image.');
+		return;
+	}
+
+	hideError();
+
+	const reader = new FileReader();
+
+	reader.addEventListener('load', () => {
+		setPastedImage(reader.result, file.name || 'Clipboard image');
+	});
+
+	reader.onerror = () => {
+		showError('Failed to read the pasted image.');
+	};
+
+	reader.readAsDataURL(file);
+}
+
+// Handle paste events on the whole document
+document.addEventListener('paste', (e) => {
+	const clipboardData = e.clipboardData;
+
+	if (!clipboardData) return;
+
+	// Check for image files in clipboard items
+	const items = clipboardData.items;
+
+	if (items) {
+		for (let i = 0; i < items.length; i++) {
+			if (items[i].type.startsWith('image/')) {
+				e.preventDefault();
+				const file = items[i].getAsFile();
+				handleImageFile(file);
+				return;
+			}
+		}
+	}
+
+	// Fallback: check clipboardData.files (some browsers/OS put images here)
+	const files = clipboardData.files;
+
+	if (files && files.length > 0) {
+		for (let i = 0; i < files.length; i++) {
+			if (files[i].type.startsWith('image/')) {
+				e.preventDefault();
+				handleImageFile(files[i]);
+				return;
+			}
+		}
+	}
+});
+
+// Also support reading from clipboard via the async Clipboard API (for "Copy Image" on macOS)
+async function pasteFromClipboardAPI() {
+	hideError();
+
+	try {
+		const clipboardItems = await navigator.clipboard.read();
+
+		for (const item of clipboardItems) {
+			for (const type of item.types) {
+				if (type.startsWith('image/')) {
+					const blob = await item.getType(type);
+					const reader = new FileReader();
+
+					reader.addEventListener('load', () => {
+						setPastedImage(reader.result, 'Clipboard image');
+					});
+
+					reader.onerror = () => {
+						showError('Failed to read the clipboard image.');
+					};
+
+					reader.readAsDataURL(blob);
+					return;
+				}
+			}
+		}
+
+		showError('No image found in clipboard. Copy an image first, then try again.');
+	} catch (error) {
+		showError(`Cannot read clipboard: ${error.message}. Try pressing Ctrl/Cmd+V instead.`);
+	}
+}
+
+// Handle drag-and-drop on the paste zone
+pasteZone.addEventListener('dragover', (e) => {
+	e.preventDefault();
+	pasteZone.classList.add('drag-over');
+});
+
+pasteZone.addEventListener('dragleave', (e) => {
+	e.preventDefault();
+	pasteZone.classList.remove('drag-over');
+});
+
+pasteZone.addEventListener('drop', (e) => {
+	e.preventDefault();
+	pasteZone.classList.remove('drag-over');
+
+	const files = e.dataTransfer.files;
+
+	if (files.length > 0) {
+		handleImageFile(files[0]);
+	}
+});
+
+// Click on paste zone to open file picker
+pasteZone.addEventListener('click', () => {
+	if (pastedImageDataUrl) return; // Don't open picker if image already loaded
+
+	const input = document.createElement('input');
+	input.type = 'file';
+	input.accept = 'image/*';
+
+	input.addEventListener('change', () => {
+		if (input.files.length > 0) {
+			handleImageFile(input.files[0]);
+		}
+	});
+
+	input.click();
+});
 
 // Add keyboard shortcut
 document.addEventListener('keydown', (e) => {

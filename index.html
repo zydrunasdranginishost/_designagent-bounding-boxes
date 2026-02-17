@@ -172,6 +172,123 @@
         .hidden {
             display: none;
         }
+
+        .paste-zone {
+            border: 2px dashed #444;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #16213e;
+            position: relative;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .paste-zone:hover {
+            border-color: #e94560;
+            background: #1a2744;
+        }
+
+        .paste-zone.drag-over {
+            border-color: #e94560;
+            background: #1a2744;
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.2);
+        }
+
+        .paste-zone.has-image {
+            border-color: #44ff44;
+            border-style: solid;
+        }
+
+        .paste-zone .paste-icon {
+            font-size: 32px;
+            color: #555;
+            transition: color 0.2s;
+        }
+
+        .paste-zone:hover .paste-icon {
+            color: #e94560;
+        }
+
+        .paste-zone .paste-text {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .paste-zone .paste-text strong {
+            color: #aaa;
+        }
+
+        .paste-zone .paste-hint {
+            color: #555;
+            font-size: 12px;
+        }
+
+        .paste-zone .image-preview {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 4px;
+            object-fit: contain;
+        }
+
+        .paste-zone .clear-image {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .paste-zone .clear-image:hover {
+            background: #ff6b6b;
+        }
+
+        .paste-zone .image-name {
+            color: #44ff44;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .paste-zone .paste-btn {
+            margin-top: 4px;
+            padding: 6px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .paste-zone .paste-btn:hover {
+            background: #ff6b6b;
+        }
+
+        .input-group .or-divider {
+            text-align: center;
+            color: #555;
+            font-size: 12px;
+            margin: 8px 0;
+        }
     </style>
 </head>
 <body>
@@ -180,7 +297,14 @@
         
         <div class="input-section">
             <div class="input-group">
-                <label for="base64Input">Base64 Image JSON</label>
+                <label>Image Input</label>
+                <div class="paste-zone" id="pasteZone" tabindex="0">
+                    <div class="paste-icon">&#128203;</div>
+                    <div class="paste-text"><strong>Paste image here</strong> (Ctrl/Cmd+V)</div>
+                    <div class="paste-hint">or drag &amp; drop an image file</div>
+                    <button class="paste-btn" onclick="event.stopPropagation(); pasteFromClipboardAPI()">Paste from Clipboard</button>
+                </div>
+                <div class="or-divider">- OR paste Base64 JSON below -</div>
 		<textarea id="base64Input" placeholder='{"image": "..."}'></textarea>
             </div>
             <div class="input-group">
